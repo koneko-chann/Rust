@@ -1,0 +1,82 @@
+use std::sync::Arc;
+
+use axum::{
+    extract::{Path, Request, State},
+    http::{Method, StatusCode, Uri},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
+    routing::get,
+    Json, Router,
+};
+use dotenv::dotenv;
+use core_crate::{config::AppConfig,error::AppError, AppResult};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use infrastructure::initialize_db;
+use sqlx::{prelude::FromRow,PgPool};
+use tracing::info;
+use uuid::Uuid;
+
+#[tokio::main]
+async fn main() {
+    dotenv().ok();
+    tracing_subscriber::fmt::init();
+
+    let cfg = AppConfig::from_env().expect("Cann't get env");
+    let pool = initialize_db(&cfg.postgres.dsn, cfg.postgres.max_conn).await;
+
+    let app = Router::new()
+        .route("/{msg}", get(say_hello)) // auth
+        .route("/user/{id}", get(get_user))
+        .layer(middleware::map_response(mw_map_response)) // 1
+        .layer(middleware::from_fn_with_state(pool.clone(), mw_auth)) // 2
+        .with_state(pool);
+    info!("Connect Database successfully");
+
+    info!("Server is running on port: {}", cfg.web.addr);
+    let listener = tokio::net::TcpListener::bind(cfg.web.addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+}
+
+pub async fn say_hello(Path(msg): Path<String>) -> AppResult<Json<serde_json::Value>> {
+    info!("->> Function Say Hello");
+    if msg.is_empty() {
+        Err(AppError::NotFound)
+    } else {
+        Ok(Json(json!({"msg" : msg})))
+    }
+}
+
+#[derive(Serialize, FromRow)]
+pub struct User {
+    pub pk_user_id: i32,
+    pub username: String,
+}
+
+#[derive(Deserialize)]
+pub struct UserId {
+    pub id: i64,
+}
+
+pub async fn get_user(State(db): State<PgPool>, Path(id): Path<UserId>) -> AppResult<Json<User>> {
+    let user: User = sqlx::query_as::<_, User>(r#"SELECT * FROM "user"."tbl_user" WHERE pk_user_id = $1"#)
+        .bind(id.id)
+        .fetch_optional(&db)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    Ok(Json(user))
+}
+
+pub async fn mw_map_response(uri: Uri, req_method: Method, res: Response) -> Response {
+    let uuid = Uuid::new_v4();
+    info!("->> MAP RESPONSE");
+    info!("->> UUid: {}", uuid.to_string());
+    info!("->> Method: {}", req_method.to_string());
+    info!("->> Uri: {}", uri.to_string());
+    (StatusCode::ACCEPTED, res).into_response()
+}
+
+pub async fn mw_auth(req: Request, next: Next) -> AppResult<Response> {
+    info!("->> MIDDLEWARE AUTH");
+    Ok(next.run(req).await)
+}
