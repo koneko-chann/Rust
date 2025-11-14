@@ -4,3 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+modql = {version = "*",features = ["with-sea-query"]}
+serde = "1.0.228"
+sqlx = {version = "*",features = ["macros","postgres","runtime-tokio-rustls"]}
+sea-query={version ="*"}
+sea-query-binder ={version = "*",features = ["sqlx-postgres"]}
+o2o="0.5.4"

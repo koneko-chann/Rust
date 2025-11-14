@@ -4,3 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+core_crate={ path = "../core" }
+infrastructure={ path = "../infrastructure" }
+axum = "0.8.6"
+sqlx = { version = "0.8.6",features = ["any","postgres","runtime-tokio-native-tls"] }
+tracing = "0.1.41"
+modql={version = "*"}
+domain={ path = "../domain" }
+password-worker="*"

@@ -1,14 +1,30 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+use axum::Router;
+use infrastructure::middleware::{
+    self, UserDMC,
+    mw_auth::{self, mw_auth_with_jwt},
+};
+use sqlx::PgPool;
+
+use crate::{
+    authentication::{login, register},
+    user::{create_user_route, get_user_route, get_users_route},
+};
+pub mod authentication;
+pub mod user;
+pub fn user_routes() -> Router<PgPool> {
+    Router::new()
+        .nest(
+            "/api/v1",
+            Router::new()
+                .merge(get_user_route())
+               .merge(get_users_route())
+                .merge(create_user_route::<UserDMC>())
+                .merge(user::update_user_route())
+                .merge(user::delete_user_route()),
+        )
+        .layer(axum::middleware::from_fn(mw_auth_with_jwt))
+    //Not found route can add he
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub fn auth_routes() -> Router<PgPool> {
+    Router::new().nest("/api/v1", Router::new().merge(login()).merge(register()))
 }

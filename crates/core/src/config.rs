@@ -1,5 +1,5 @@
-use dotenv::var;
 use crate::AppResult;
+use dotenv::var;
 
 pub fn get_dsn() -> String {
     var("DSN").expect("Dont have DSN env variable")
@@ -24,8 +24,8 @@ pub struct Postgres {
 }
 #[derive(serde::Deserialize)]
 pub struct AppConfig {
-    pub web: WebConfig,
     pub postgres: Postgres,
+    pub web: WebConfig,
 }
 impl AppConfig {
     pub fn from_env() -> AppResult<AppConfig> {
@@ -36,5 +36,3 @@ impl AppConfig {
         Ok(config.try_deserialize()?)
     }
 }
-
-

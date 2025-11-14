@@ -1,5 +1,6 @@
-use sqlx::{postgres::PgPoolOptions, PgPool};
-
+use sqlx::{PgPool, postgres::PgPoolOptions};
+pub mod middleware;
+pub mod utils;
 pub async fn initialize_db(dsn: &str, max_conn: u32) -> PgPool {
     let pool = PgPoolOptions::new()
         .max_connections(max_conn)
@@ -11,10 +12,7 @@ pub async fn initialize_db(dsn: &str, max_conn: u32) -> PgPool {
         });
 
     println!("Database connection established");
-
-    // Ensure `crates/infrastructure/migrations` exists at build time.
-    // Use the macro with no path so it looks for `migrations` in the crate root.
-    sqlx::migrate!()
+    sqlx::migrate!("./migrations")
         .run(&pool)
         .await
         .expect("Failed to run migrations");

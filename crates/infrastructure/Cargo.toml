@@ -4,4 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+axum = "0.8.6"
 sqlx = { version = "0.8.6",features = ["any","postgres","runtime-tokio-native-tls","migrate"] }
+tracing = "0.1.41"
+uuid = "1.18.1"
+dotenv="*"
+core_crate={ path = "../core" }
+domain={path = "../domain"}
+sea-query = "0.32.7"
+sea-query-binder ={version = "*",features = ["sqlx-postgres"]}
+modql = { version ="0.4.1", features = ["with-sea-query"] }
+jwt-simple = "0.12.13"
+bcrypt="0.17.1"
