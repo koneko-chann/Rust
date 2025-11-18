@@ -3,13 +3,13 @@ use sea_query::Value;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 
+pub mod model;
 pub mod request;
 pub mod response;
-pub mod model;
 
-#[derive(Serialize, FromRow, Fields,Debug,Clone)]
+#[derive(Serialize, FromRow, Fields, Debug, Clone)]
 pub struct User {
-    pub pk_user_id: i64,
+    pub pk_user_id: Option<i64>,
     pub username: String,
     pub password_hash: String,
 }
@@ -21,7 +21,7 @@ pub trait HasPrimary {
 impl HasPrimary for User {
     const PRIMARY_NAME: &'static str = "pk_user_id";
     fn primary_value(&self) -> sea_query::Value {
-        sea_query::Value::Int(Some(self.pk_user_id as i32))
+        sea_query::Value::Int(self.pk_user_id.map(|id| id as i32))
     }
 }
 #[derive(Serialize, FromRow, Fields)]

@@ -46,7 +46,7 @@ impl IntoResponse for AppError {
                 Json(json!({"error":format!("Environment Variable Error: {}",e)})),
             )
                 .into_response(),
-            AppError::Conflict=>(
+            AppError::Conflict => (
                 StatusCode::CONFLICT,
                 Json(json!({"error":format!("Conflict Error")})),
             )
@@ -61,12 +61,9 @@ impl IntoResponse for AppError {
                 Json(json!({"error":"Unauthorized"})),
             )
                 .into_response(),
-            AppError::Forbidden => (
-                StatusCode::FORBIDDEN,
-                Json(json!({"error":"Forbidden"})),
-            )
-                .into_response(),
+            AppError::Forbidden => {
+                (StatusCode::FORBIDDEN, Json(json!({"error":"Forbidden"}))).into_response()
+            }
         }
     }
 }
-

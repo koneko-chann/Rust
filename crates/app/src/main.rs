@@ -1,4 +1,4 @@
-use api::{auth_routes, user_routes};
+use api::{auth_routes, todo_routes, user_routes};
 use axum::{
     Json, Router,
     extract::Path,
@@ -6,9 +6,11 @@ use axum::{
 };
 use core_crate::{AppResult, config::AppConfig, error::AppError};
 use dotenv::dotenv;
+use http::HeaderValue;
 use infrastructure::initialize_db;
 use infrastructure::middleware::{map_response::mw_map_response, mw_auth::mw_auth};
 use serde_json::json;
+use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 #[tokio::main]
 async fn main() {
@@ -17,13 +19,19 @@ async fn main() {
 
     let cfg = AppConfig::from_env().expect("Cann't get env");
     let pool = initialize_db(&cfg.postgres.dsn, cfg.postgres.max_conn).await;
-
+    let cors = CorsLayer::new()
+        .allow_origin(HeaderValue::from_str("*").unwrap())
+        .allow_methods(Any)
+        .allow_headers(Any);
     let app = Router::new()
         // .route("/{msg}", get(say_hello)) // auth
         // .route("/user/{id}", get(get_user))
-        .merge(user_routes()).merge(auth_routes())
+        .merge(user_routes())
+        .merge(auth_routes())
+        .merge(todo_routes())
         .layer(middleware::map_response(mw_map_response)) // 1
         .layer(middleware::from_fn_with_state(pool.clone(), mw_auth)) // 2
+        .layer(cors)
         .fallback(|| async { Err::<(), AppError>(AppError::NotFound) })
         .with_state(pool);
     info!("Connect Database successfully");

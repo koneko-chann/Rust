@@ -24,9 +24,9 @@ pub fn get_user_route() -> Router<PgPool> {
         if _id.id != auth_user.user_id {
             return Err(AppError::Forbidden);
         }
-        let user = find_by_field::<UserDMC, User, i32>(db, "pk_user_id", auth_user.user_id)
+        let user = find_by_field::<UserDMC, User, i64>(db, "pk_user_id", auth_user.user_id)
             .await?
-            .ok_or(AppError::NotFound)?;
+            .ok_or(AppError::NotFound)?.first().cloned().ok_or(AppError::NotFound)?;
         Ok(Json(user))
     }
     Router::new().route("/user/{id}", axum::routing::get(get_user_by_id))

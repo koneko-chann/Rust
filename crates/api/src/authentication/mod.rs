@@ -18,13 +18,13 @@ pub fn login() -> Router<PgPool> {
         let (username, password) = (req.username.as_str(), req.password);
         let user = find_by_field::<UserDMC, User, &str>(db, "username", username)
             .await?
-            .ok_or(AppError::Unauthorized)?;
+            .ok_or(AppError::Unauthorized)?.first().cloned().ok_or(AppError::Unauthorized)?;
         //verify password
         let ok_password = verify_password(password.as_str(), &user.password_hash).unwrap_or(false);
         if !ok_password {
             return Err(AppError::Unauthorized);
         }
-        let token = create_jwt_token(user.pk_user_id);
+        let token = create_jwt_token(user.pk_user_id.unwrap_or_default());
         Ok(Json(ResponseAuthenticate { token }))
     }
     Router::new().route("/login", post(login_user))
