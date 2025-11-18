@@ -21,3 +21,17 @@ pub struct RequestCreateTodo {
     #[map(description)]
     pub description: Option<String>,
 }
+
+#[derive(Deserialize, Fields, o2o)]
+#[owned_into(Todo)]
+#[ghosts(created_at: None, updated_at: None, fk_user_id: i64::MIN)]
+pub struct RequestUpdateTodo {
+    #[into(pk_todo_item_id)]
+    pub id: Option<i32>,
+    #[into(title)]
+    pub title: String,
+    #[into(is_completed)]
+    pub completed: bool,
+    #[into(description)]
+    pub description: Option<String>,
+}

@@ -65,5 +65,5 @@ pub fn update_todo() -> Router<PgPool> {
     Router::new().route("/todo", axum::routing::put(update_todo_for_auth_user))
 }
 pub fn todo_routes() -> Router<PgPool> {
-    get_todo().merge(create_todo())
+    get_todo().merge(create_todo()).merge(update_todo())
 }
