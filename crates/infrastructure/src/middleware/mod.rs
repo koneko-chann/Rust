@@ -3,8 +3,7 @@ pub mod mw_auth;
 use axum::Json;
 use core_crate::{AppResult, error::AppError};
 use domain::user::{
-    HasPrimary, User,
-    request::{RequestCreateUser, RequestUpdateUser},
+    self, HasPrimary, User, request::{RequestCreateUser, RequestUpdateUser}
 };
 use modql::{
     SIden,
@@ -91,13 +90,20 @@ where
     sqlx::query_with(&sql, values).execute(&db).await?;
     Ok(())
 }
-pub async fn delete(db: PgPool, user_id: i32) -> AppResult<()> {
-    let deleted_user = sqlx::query(r#"DELETE FROM "user"."tbl_user" WHERE pk_user_id=$1"#)
-        .bind(user_id)
-        .execute(&db)
-        .await?;
-    print!("DAta: {:?}", deleted_user);
+pub async fn delete<MC,T>(db: PgPool, user_id: T) -> AppResult<()> 
+where
+    MC: DMC,
+    T:HasPrimary ,
 
+{
+    let primary_field= T::PRIMARY_NAME;
+    let mut query=Query::delete();
+    let primary_value=user_id.primary_value();
+    query.from_table(MC::table_ref());
+    query.and_where(Expr::col(Alias::new(primary_field)).eq(Expr::val(primary_value)));
+    let (sql, values) = query.build_sqlx(PostgresQueryBuilder);
+    info!("SQL: {}", sql);
+    sqlx::query_with(&sql, values).execute(&db).await?;
     Ok(())
 }
 pub struct UserDMC;

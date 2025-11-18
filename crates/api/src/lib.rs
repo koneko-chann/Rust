@@ -21,7 +21,7 @@ pub fn user_routes() -> Router<PgPool> {
                 .merge(get_users_route())
                 .merge(create_user_route::<UserDMC>())
                 .merge(user::update_user_route())
-                .merge(user::delete_user_route()),
+                // .merge(user::delete_user_route()),
         )
         .layer(axum::middleware::from_fn(mw_auth_with_jwt))
     //Not found route can add he

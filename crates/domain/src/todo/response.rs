@@ -20,3 +20,4 @@ pub struct ResponseGetTodo {
 }
 
 pub type ResponseCreateTodo = ResponseGetTodo;
+pub type ResponseUpdateTodo = ResponseGetTodo;

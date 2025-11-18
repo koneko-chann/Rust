@@ -11,7 +11,7 @@ use domain::user::request::RequestGetUser;
 use domain::user::{User, request::RequestCreateUser, response::ResposeCreateUser};
 use infrastructure::middleware::{
     DMC, UserDMC, find_by_field, list,
-    mw_auth::{AuthUser, mw_auth_with_jwt, mw_auth_with_secret_key},
+    mw_auth::{AuthUser, mw_auth_with_secret_key},
 };
 use sqlx::PgPool;
 
@@ -48,12 +48,13 @@ pub fn update_user_route() -> Router<PgPool> {
     }
     Router::new().route("/user/update", axum::routing::put(update_user))
 }
-pub fn delete_user_route() -> Router<PgPool> {
-    pub async fn delete_user(State(db): State<PgPool>, Path(user_id): Path<i32>) -> AppResult<()> {
-        infrastructure::middleware::delete(db, user_id).await
-    }
-    Router::new().route("/user/delete/{user_id}", axum::routing::delete(delete_user))
-}
+// pub fn delete_user_route() -> Router<PgPool> {
+//     pub async fn delete_user(State(db): State<PgPool>, Path(user_id): Path<i32>) -> AppResult<()> {
+
+//         infrastructure::middleware::delete::<UserDMC, User>(db, user_id).await
+//     }
+//     Router::new().route("/user/delete/{user_id}", axum::routing::delete(delete_user))
+// }
 pub fn create_user_route<MC>() -> Router<PgPool>
 where
     MC: DMC + 'static,

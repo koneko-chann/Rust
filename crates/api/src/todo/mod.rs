@@ -1,12 +1,12 @@
 use axum::{
     Extension, Json, Router,
-    extract::State,
+    extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
 use core_crate::AppResult;
 use domain::{
-    todo::{Todo, response::ResponseGetTodo},
+    todo::{self, Todo, request::RequestDeleteTodo, response::ResponseGetTodo},
     user,
 };
 use infrastructure::middleware::{TodoDMC, find_by_field, mw_auth::AuthUser};
@@ -32,6 +32,29 @@ pub fn get_todo() -> Router<PgPool> {
         Ok((StatusCode::OK, Json(response)))
     }
     Router::new().route("/todo", axum::routing::get(get_todo_by_auth_user))
+}
+pub fn get_todo_by_id() -> Router<PgPool> {
+    pub async fn get_todo_by_id_for_auth_user(
+        State(db): State<PgPool>,
+        Extension(auth_user): Extension<AuthUser>,
+        Path(todo_id): Path<i32>,
+    ) -> AppResult<(StatusCode, Json<domain::todo::response::ResponseGetTodo>)> {
+        info!("->> Fetching todo item with id {:?} for user_id {}", todo_id, auth_user.user_id);
+        let user_id = auth_user.user_id;
+        let todo_opt = find_by_field::<TodoDMC, Todo, i64>(db, "pk_todo_item_id", todo_id as i64).await?;
+        let todo = todo_opt
+            .ok_or(core_crate::error::AppError::NotFound)?
+            .into_iter()
+            .find(|t| t.fk_user_id == user_id)
+            .ok_or(core_crate::error::AppError::Forbidden)?;
+        let response = domain::todo::response::ResponseGetTodo::from(todo);
+        info!(
+            "->> Retrieved todo item with id {:?} for user_id {}",
+            response.id, user_id
+        );
+        Ok((StatusCode::OK, Json(response)))
+    }
+    Router::new().route("/todo/{todo_id}", axum::routing::get(get_todo_by_id_for_auth_user))
 }
 pub fn create_todo() -> Router<PgPool> {
     pub async fn create_todo_for_auth_user(
@@ -60,10 +83,32 @@ pub fn update_todo() -> Router<PgPool> {
         let mut entity: domain::todo::Todo = req.into();
         entity.fk_user_id = auth_user.user_id;
         infrastructure::middleware::update::<TodoDMC, Todo>(db, entity).await?;
-        Ok(StatusCode::NO_CONTENT.into_response())
+        Ok(StatusCode::OK.into_response())
     }
     Router::new().route("/todo", axum::routing::put(update_todo_for_auth_user))
 }
+pub fn delete_todo() -> Router<PgPool> {
+    pub async fn delete_todo_for_auth_user(
+        State(db): State<PgPool>,
+        Extension(auth_user): Extension<AuthUser>,
+        Path(todo_id): Path<i32>,
+    ) -> AppResult<Response> {
+        let user_id = auth_user.user_id;
+        let todo_opt = find_by_field::<TodoDMC, Todo, i64>(db.clone(), "pk_todo_item_id", todo_id as i64).await?;
+        let todo = todo_opt
+            .ok_or(core_crate::error::AppError::NotFound)?
+            .into_iter()
+            .find(|t| t.fk_user_id == user_id)
+            .ok_or(core_crate::error::AppError::Forbidden)?;
+        let todo_id = todo.pk_todo_item_id.unwrap_or_default();
+        if todo_id == 0 {
+            return Err(core_crate::error::AppError::NotFound);
+        }
+        infrastructure::middleware::delete::<TodoDMC, Todo>(db, RequestDeleteTodo { id: Some(todo_id) }.into()).await?;
+        Ok(StatusCode::OK.into_response())
+    }
+    Router::new().route("/todo/{todo_id}", axum::routing::delete(delete_todo_for_auth_user))
+}
 pub fn todo_routes() -> Router<PgPool> {
-    get_todo().merge(create_todo())
+    get_todo().merge(create_todo()).merge(update_todo()).merge(delete_todo()).merge(get_todo_by_id())
 }
