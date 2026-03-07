@@ -5,16 +5,19 @@ use core_crate::{AppResult, error::AppError};
 use domain::user::{
     self, HasPrimary, User, request::{RequestCreateUser, RequestUpdateUser}
 };
+use jwt_simple::reexports::rand::seq;
 use modql::{
     SIden,
     field::{HasFields, HasSeaFields},
 };
 use sea_query::{
-    Alias, Expr, ExprTrait, IntoIden, PostgresQueryBuilder, Query, Returning, TableRef,
+    Alias, Expr, ExprTrait, IntoIden, PostgresQueryBuilder, Query, QueryStatement, Returning, TableRef
 };
 use sea_query_binder::SqlxBinder;
 use sqlx::{FromRow, PgPool, postgres::PgRow};
-use tracing::info;
+use tracing::{debug, info};
+
+use crate::utils::pagination::build_query;
 // use tracing::info;
 // fn table_ref()->TableRef{
 //     TableRef::SchemaTable(SIden("user").into_iden(), SIden("tbl_user").into_iden())
@@ -39,8 +42,12 @@ where
     O: for<'a> FromRow<'a, PgRow> + HasFields + Send + Unpin,
     MC: DMC,
 {
+    let mut sea_que=build_query(Some(1), Some(1))
+    .from(MC::table_ref())
+   .build_sqlx(PostgresQueryBuilder);
+    info!("SQL: {}", &sea_que.0);
     let list_data: Vec<O> = sqlx::query_as::<_, O>(
-        format!("SELECT * FROM \"{}\".\"{}\"", MC::SCHEMA, MC::TABLE).as_str(),
+        &sea_que.0
     )
     .fetch_all(&db)
     .await?;
@@ -77,6 +84,8 @@ where
     let cloned_entity = entity.clone();
     let pk_value = cloned_entity.primary_value();
     let sea_fields = entity.not_none_sea_fields();
+    //test 
+
     let mut query = Query::update();
     query.table(MC::table_ref());
     let sets = sea_fields.for_sea_update();

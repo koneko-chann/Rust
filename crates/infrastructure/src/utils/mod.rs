@@ -1,6 +1,6 @@
 use jwt_simple::{prelude::*, reexports::anyhow::anyhow};
 use std::{str::FromStr, sync::LazyLock};
-
+pub mod pagination;
 static JWT_SECRET: LazyLock<String> = LazyLock::new(|| {
     std::env::var("JWT_SECRET").unwrap_or_else(|_| "default_secret_key".to_string())
 });
